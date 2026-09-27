@@ -50,7 +50,7 @@ namespace bufman {
 // field individually (rather than memcpy'ing the whole struct) because the
 // compiler is free to insert padding between struct members; only this
 // explicit, gap-free layout is guaranteed to match on disk.
-void serialize(const Part& part, char* buffer, std::size_t max_len) {
+void serialize_part(const Part& part, char* buffer, std::size_t max_len) {
     assert(buffer != nullptr);
     if (max_len < kPartRecordSize) {
         return;
@@ -72,7 +72,7 @@ void serialize(const Part& part, char* buffer, std::size_t max_len) {
 
 // Mirror image of serialize: walks the same fields in the same order at the
 // same offsets, copying bytes out of the buffer and into a fresh Part.
-bool deserialize(const char* buffer, std::size_t max_len, Part& part) {
+bool deserialize_part(const char* buffer, std::size_t max_len, Part& part) {
     if (buffer == nullptr || max_len < kPartRecordSize) {
         return false;
     }
@@ -95,26 +95,26 @@ bool deserialize(const char* buffer, std::size_t max_len, Part& part) {
 
 // Zero-fills a block so every unused record slot reads back as pid == 0,
 // which deserialize_block below treats as "end of data in this block".
-void initialize_block(char* block) {
+void initialize_part_block(char* block) {
     assert(block != nullptr);
     std::memset(block, 0, kPartBlockSize);
 }
 
 // Lays out up to kRecordsPerBlock records back to back: record i starts at
 // byte i * kRecordSize. Any leftover slots stay zeroed by initialize_block.
-std::size_t serialize_block(const std::vector<Part>& parts, char* block) {
+std::size_t serialize_part_block(const std::vector<Part>& parts, char* block) {
     assert(block != nullptr);
-    initialize_block(block);
+    initialize_part_block (block);
     const std::size_t count = std::min(parts.size(), kPartsPerBlock);
     for (std::size_t i = 0; i < count; ++i) {
-        serialize(parts[i], block + i * kPartRecordSize, kPartRecordSize);
+        serialize_part (parts[i], block + i * kPartRecordSize, kPartRecordSize);
     }
     return count;
 }
 
 // Reads records out of a block in the same fixed-slot order, stopping at the
 // first pid == 0 slot (see initialize_block) since that marks unused space.
-std::vector<Part> deserialize_block(const char* block) {
+std::vector<Part> deserialize_part_block(const char* block) {
     std::vector<Part> parts;
     if (block == nullptr) {
         return parts;
@@ -122,7 +122,7 @@ std::vector<Part> deserialize_block(const char* block) {
 
     for (std::size_t i = 0; i < kPartsPerBlock; ++i) {
         Part part{};
-        if (!deserialize(block + i * kPartRecordSize, kPartRecordSize, part) || part.part_id == 0) {
+        if (!deserialize_part(block + i * kPartRecordSize, kPartRecordSize, part) || part.part_id == 0) {
             break;
         }
         parts.push_back(part);
@@ -130,47 +130,47 @@ std::vector<Part> deserialize_block(const char* block) {
     return parts;
 }
 
-std::size_t record_count(const char* block) {
+std::size_t part_record_count(const char* block) {
     if (block == nullptr) {
         return 0;
     }
     for (std::size_t i = 0; i < kPartsPerBlock; ++i) {
         Part part{};
-        if (!deserialize(block + i * kPartRecordSize, kPartRecordSize, part) || part.part_id == 0) {
+        if (!deserialize_part(block + i * kPartRecordSize, kPartRecordSize, part) || part.part_id == 0) {
             return i;
         }
     }
     return kPartsPerBlock;
 }
 
-std::optional<std::size_t> first_free_slot(const char* block) {
+std::optional<std::size_t> first_free_part_slot(const char* block) {
     if (block == nullptr) {
         return std::nullopt;
     }
     for (std::size_t i = 0; i < kPartsPerBlock; ++i) {
         Part part{};
-        if (!deserialize(block + i * kPartRecordSize, kPartRecordSize, part) || part.part_id == 0) {
+        if (!deserialize_part(block + i * kPartRecordSize, kPartRecordSize, part) || part.part_id == 0) {
             return i;
         }
     }
     return std::nullopt;
 }
 
-bool get_record(const char* block, std::size_t slot, Part& part) {
+bool get_part_record(const char* block, std::size_t slot, Part& part) {
     if (block == nullptr || slot >= kPartsPerBlock) {
         return false;
     }
-    if (!deserialize(block + slot * kPartRecordSize, kPartRecordSize, part)) {
+    if (!deserialize_part(block + slot * kPartRecordSize, kPartRecordSize, part)) {
         return false;
     }
     return part.part_id != 0;
 }
 
-bool put_record(char* block, std::size_t slot, const Part& part) {
+bool put_part_record(char* block, std::size_t slot, const Part& part) {
     if (block == nullptr || slot >= kPartsPerBlock || part.part_id == 0) {
         return false;
     }
-    serialize(part, block + slot * kPartRecordSize, kPartRecordSize);
+    serialize_part(part, block + slot * kPartRecordSize, kPartRecordSize);
     return true;
 }
 

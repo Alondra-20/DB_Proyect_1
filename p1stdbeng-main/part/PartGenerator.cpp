@@ -34,11 +34,15 @@
 namespace bufman {
 namespace {
 
-// ? IM NOT SURE IF WE HACE TO DELETE  THIS and change it to materials hacer algo v=basic
+// ? IM NOT SURE IF WE HACE TO DELETE  THIS and change it to materials hacer algo v=basic and lo de color should i  do  for colors?
 
 //  constexpr std::array<const char*, 8> kCityCodes = {
 //     "PR", "NY", "LA", "TX", "FL", "CA", "WA", "OH"
 // };
+
+constexpr std::array<const char*, 6> kMaterials = {
+    "Steel","Iron","Wood","Glass","Copper","Plastic"
+};
 
 }
 
@@ -52,14 +56,18 @@ std::vector<Part> generate(std::size_t count, int first_pid) {
         
         
         //!! check this
-        part.part_name[0] = '\0'; 
+       // part.part_name[0] = '\0'; 
         part.part_weight = 1.0 + (part.part_id % 100);
         part.part_color = part.part_id % 6;  
         part.part_price = 10.0 + (part.part_id % 100);
-        part.part_material[0] = '\0';
+       // part.part_material[0] = '\0';
         
         const std::string name = "P" + std::to_string(part.part_id);
         name.copy(part.part_name, std::min(name.size(), sizeof(part.part_name) - 1));
+
+        const char* material = kMaterials[i % kMaterials.size()];
+        std::memcpy(part.part_material, material, std::min(strlen(material), sizeof(part.part_material) - 1));
+        part.part_material[sizeof(part.part_material) - 1] = '\0';
         
         // const char* city = kCityCodes[i % kCityCodes.size()];
         // std::memcpy(part.part_material, city, 2);

@@ -36,6 +36,7 @@
 #include <charconv>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 namespace bufman {
 namespace {
@@ -92,7 +93,7 @@ bool parse_line(const std::string& line, Part& part, std::string& error) {
         return false;
     }
     if (part_name.size() >  9) {
-        error = "part_name must contain at most 10 characters";
+        error = "part_name must contain at most 9 characters";
         return false;
     }
     if (!parse_float(part_weight_text, part_weight) || part_weight < 0) {
@@ -108,33 +109,38 @@ bool parse_line(const std::string& line, Part& part, std::string& error) {
         return false;
     }
 
+    if (!parse_float(part_weight_text, part_weight) || part_weight < 0) {
+        error = "part_weight must be a nonnegative float";
+        return false;
+    }
+
     if (part_material.size() >  9) {
-        error = "part_material must contain at most 10 characters";
+        error = "part_material must contain at most 9 characters";
         return false;
     }
 
     part = Part{};
     part.part_id = part_id;
-    part.part_name[0] = '\0';
     part.part_weight = part_weight;
     part.part_color = part_color;
     part.part_price = part_price;
-    part.part_material[0] = '\0';
 
-    // !! CHECK THIS
-    part_name.copy(part.part_name, (part_name.size(), sizeof(part.part_name) - 1));
-    part_material.copy(part.part_material,(part_material.size(), sizeof(part.part_material) - 1));
+    // Copiar los strigns hastta el character null
+    part_name.copy(part.part_name, part_name.size());
+    part_material.copy(part.part_material, part_material.size());
+
     return true;
 }
 
 }
 
-PartLoadResult load(const std::string& path, std::ostream& diagnostics) {
+PartLoadResult load_parts(const std::string& path, std::ostream& diagnostics) {
     PartLoadResult result;
     std::ifstream input(path);
+//!! si no se puede abrir el archivo, imprime un mensaje de error y devuelve un resultado vacío
     if (!input) {
         diagnostics << "cannot open CSV file: " << path << '\n';
-        result.skipped = 1;
+         //result.skipped = 1;
         return result;
     }
 
@@ -142,9 +148,10 @@ PartLoadResult load(const std::string& path, std::ostream& diagnostics) {
     std::size_t line_number = 0;
     while (std::getline(input, line)) {
         ++line_number;
+//!! si encuentras una linea vacia, es una fila invalida, aumenta skip y empre error
         if (line.empty()) {
-            ++result.skipped;
-            diagnostics << "line " << line_number << ": blank line\n";
+           // ++result.skipped;
+           // diagnostics << "line " << line_number << ": blank line\n";
             continue;
         }
         Part part{};
