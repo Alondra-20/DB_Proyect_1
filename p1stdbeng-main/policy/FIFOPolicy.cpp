@@ -27,6 +27,15 @@ void FIFOPolicy::on_remove(std::size_t frame) {
     }
     
 }
+std::optional<std::size_t> FIFOPolicy::pick_victim(
+        const std::vector<std::size_t>& candidates) const {
+    for (auto it = queue_.begin(); it != queue_.end(); ++it) {
+        if (std::find(candidates.begin(), candidates.end(), *it) != candidates.end()) {
+            return *it;
+        }
+    }
 
+    return std::nullopt;
+}
 
 }
