@@ -41,6 +41,12 @@
 namespace bufman {
 namespace {
 
+/** 
+**Funcion parse_integer boleana para analizar enteros
+* @param text: la cadena de texto a analizar
+* @param value: la variable donde se almacenará el valor analizado
+* @return bool: true si el análisis es exitoso, false en caso contrario
+*/
 bool parse_integer(const std::string& text, int& value) {
     if (text.empty()) {
         return false;
@@ -50,7 +56,12 @@ bool parse_integer(const std::string& text, int& value) {
     const auto result = std::from_chars(first, last, value);
     return result.ec == std::errc{} && result.ptr == last;
 }
-
+/** 
+**Funcion parse_float boleana para analizar flotantes
+* @param text: la cadena de texto a analizar
+* @param value: la variable donde se almacenará el valor analizado
+* @return bool: true si el análisis es exitoso, false en caso contrario
+*/
 bool parse_float(const std::string& text, float& value) {
     if (text.empty()) {
         return false;
@@ -60,7 +71,13 @@ bool parse_float(const std::string& text, float& value) {
     const auto result = std::from_chars(first, last, value);
     return result.ec == std::errc{} && result.ptr == last;
 }
-
+/** 
+**Funcion parse_line boleana para analizar líneas
+* @param line: la cadena de texto a analizar
+* @param part: la variable donde se almacenará el valor analizado
+* @param error: la variable donde se almacenará el mensaje de error
+* @return bool: true si el análisis es exitoso, false en caso contrario
+*/
 bool parse_line(const std::string& line, Part& part, std::string& error) {
     std::stringstream input(line);
     std::string part_id_text;
@@ -81,51 +98,51 @@ bool parse_line(const std::string& line, Part& part, std::string& error) {
         error = "expected exactly six comma-separated fields";
         return false;
     }
-
+    // Analiza y valida cada campo individualmente
     int part_id = 0;
     float part_weight = 0.0;
     int part_color = 0;
     float part_price = 0.0;
 
-
+    // Validación de el identificador
     if (!parse_integer(part_id_text, part_id) || part_id <= 0) {
         error = "part_id must be a positive integer";
         return false;
     }
+    // Validación de la longitud del nombre 
     if (part_name.size() >  9) {
         error = "part_name must contain at most 9 characters";
         return false;
     }
+    // Validación del peso
     if (!parse_float(part_weight_text, part_weight) || part_weight < 0) {
         error = "part_weight must be a nonnegative float";
         return false;
     }
+    // Validación del color 
     if (!parse_integer(part_color_text, part_color) || part_color < 0 || part_color > 5) {
         error = "part_color must be an integer between 0 and 5";
         return false;
     }
+    // Validación del precio 
     if (!parse_float(part_price_text, part_price) || part_price < 0) {
         error = "part_price must be a nonnegative float";
         return false;
     }
-
-    if (!parse_float(part_weight_text, part_weight) || part_weight < 0) {
-        error = "part_weight must be a nonnegative float";
-        return false;
-    }
-
+   
+    // Validación de la longitud del material 
     if (part_material.size() >  9) {
         error = "part_material must contain at most 9 characters";
         return false;
     }
-
+    // Si todos los campos son válidos, asigna los valores a la estructura Part
     part = Part{};
     part.part_id = part_id;
     part.part_weight = part_weight;
     part.part_color = part_color;
     part.part_price = part_price;
 
-    // Copiar los strigns hastta el character null
+    // Copiar los nombres y materiales de las piezas a los campos correspondientes
     part_name.copy(part.part_name, part_name.size());
     part_material.copy(part.part_material, part_material.size());
 
@@ -133,19 +150,26 @@ bool parse_line(const std::string& line, Part& part, std::string& error) {
 }
 
 }
-
+/** 
+**Funcion load_parts para cargar desde un archivo CSV
+* @param path: la ruta del archivo CSV
+* @param diagnostics: el flujo de diagnóstico para imprimir mensajes de error
+* @return PartLoadResult: el resultado de la carga
+*/
 PartLoadResult load_parts(const std::string& path, std::ostream& diagnostics) {
     PartLoadResult result;
     std::ifstream input(path);
+
 //!! si no se puede abrir el archivo, imprime un mensaje de error y devuelve un resultado vacío
     if (!input) {
         diagnostics << "cannot open CSV file: " << path << '\n';
          //result.skipped = 1;
         return result;
     }
-
+    // Lee el archivo línea por línea
     std::string line;
     std::size_t line_number = 0;
+
     while (std::getline(input, line)) {
         ++line_number;
 //!! si encuentras una linea vacia, es una fila invalida, aumenta skip y empre error
@@ -154,8 +178,11 @@ PartLoadResult load_parts(const std::string& path, std::ostream& diagnostics) {
            // diagnostics << "line " << line_number << ": blank line\n";
             continue;
         }
+        
+    //si la linea no es vacia, intenta parsearla, si falla, aumenta skip y imprime error
         Part part{};
         std::string error;
+
         if (!parse_line(line, part, error)) {
             ++result.skipped;
             diagnostics << "line " << line_number << ": " << error << '\n';

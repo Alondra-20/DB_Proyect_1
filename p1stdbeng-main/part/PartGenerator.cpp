@@ -34,43 +34,44 @@
 namespace bufman {
 namespace {
 
-// ? IM NOT SURE IF WE HACE TO DELETE  THIS and change it to materials hacer algo v=basic and lo de color should i  do  for colors?
+// ? Pregunta para el profe si hay que hacer un constepr para colores
 
-//  constexpr std::array<const char*, 8> kCityCodes = {
-//     "PR", "NY", "LA", "TX", "FL", "CA", "WA", "OH"
-// };
 
+// Se le asigna valores de materiales de manera cíclica,aseguranto que tenga valor valido y distinto
 constexpr std::array<const char*, 6> kMaterials = {
     "Steel","Iron","Wood","Glass","Copper","Plastic"
 };
 
 }
-
+/** 
+**Funcion generate_parts para generar piezas
+* @param count: el número de piezas a generar
+* @param first_pid: el primer identificador 
+* @return std::vector<Part>: el vector de "generate_parts"
+*/
 std::vector<Part> generate_parts(std::size_t count, int first_pid) {
     std::vector<Part> parts;
     parts.reserve(count);
 
     for (std::size_t i = 0; i < count; ++i) {
+        // Genera un identificador secuencial y valores deterministas para los demás campos
         Part part{};
         part.part_id = first_pid + static_cast<int>(i);
-        
-        
-        //!! check this
-       // part.part_name[0] = '\0'; 
         part.part_weight = 1.0 + (part.part_id % 100);
         part.part_color = part.part_id % 6;  
         part.part_price = 10.0 + (part.part_id % 100);
-       // part.part_material[0] = '\0';
-        
+       
+        // Genera un nombre basado en el identificador
         const std::string name = "P" + std::to_string(part.part_id);
         name.copy(part.part_name, std::min(name.size(), sizeof(part.part_name) - 1));
 
+        //!! check this
+        // Genera un material basado en el identificador, asegurando que sea válido y distinto
         const char* material = kMaterials[i % kMaterials.size()];
         std::memcpy(part.part_material, material, std::min(strlen(material), sizeof(part.part_material) - 1));
         part.part_material[sizeof(part.part_material) - 1] = '\0';
         
-        // const char* city = kCityCodes[i % kCityCodes.size()];
-        // std::memcpy(part.part_material, city, 2);
+       
 
         parts.push_back(part);
     }

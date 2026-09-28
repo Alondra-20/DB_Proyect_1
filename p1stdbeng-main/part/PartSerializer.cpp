@@ -33,11 +33,6 @@
 *cualquier `Part` cuyo identificador sea cero.
 */
 
-/* 
-!! que se hizo en este codigo?
-?Se adapto el ejercio 9# a este codigo de part con sus nombres correspondinetes
-!! TERMINADO
-*/
 
 #include "PartSerializer.h"
 #include <algorithm>
@@ -46,10 +41,17 @@
 
 namespace bufman {
 
-// Packs one Part into `kPartRecordSize` bytes, field by field. We copy each
-// field individually (rather than memcpy'ing the whole struct) because the
-// compiler is free to insert padding between struct members; only this
-// explicit, gap-free layout is guaranteed to match on disk.
+
+/** 
+**Funcion serialize_part para serializar una pieza
+* @param part: la pieza a serializar
+* @param buffer: el buffer donde se almacenará la pieza serializada
+* @param max_len: la longitud máxima del buffer
+*/
+//* Packs one Part into `kPartRecordSize` bytes, field by field. We copy each
+//* field individually (rather than memcpy'ing the whole struct) because the
+//* compiler is free to insert padding between struct members; only this
+//* explicit, gap-free layout is guaranteed to match on disk.
 void serialize_part(const Part& part, char* buffer, std::size_t max_len) {
     assert(buffer != nullptr);
     if (max_len < kPartRecordSize) {
@@ -69,9 +71,14 @@ void serialize_part(const Part& part, char* buffer, std::size_t max_len) {
     offset += sizeof(part.part_price);
     std::memcpy(buffer + offset, part.part_material, sizeof(part.part_material));
 }
-
-// Mirror image of serialize: walks the same fields in the same order at the
-// same offsets, copying bytes out of the buffer and into a fresh Part.
+/** 
+**Funcion deserialize_part para deserializar una pieza
+* @param part: la pieza a deserializar
+* @param buffer: el buffer donde se encuentra la pieza serializada
+* @param max_len: la longitud máxima del buffer
+*/
+//* Mirror image of serialize: walks the same fields in the same order at the
+//* same offsets, copying bytes out of the buffer and into a fresh Part.
 bool deserialize_part(const char* buffer, std::size_t max_len, Part& part) {
     if (buffer == nullptr || max_len < kPartRecordSize) {
         return false;
@@ -92,16 +99,25 @@ bool deserialize_part(const char* buffer, std::size_t max_len, Part& part) {
     std::memcpy(part.part_material, buffer + offset, sizeof(part.part_material));
     return true;
 }
-
-// Zero-fills a block so every unused record slot reads back as pid == 0,
-// which deserialize_block below treats as "end of data in this block".
+/** 
+**Funcion initialize_part para inicializar una pieza
+* @param part: la pieza a inicializar
+*/
+//* Zero-fills a block so every unused record slot reads back as pid == 0,
+//* which deserialize_block below treats as "end of data in this block".
 void initialize_part_block(char* block) {
     assert(block != nullptr);
     std::memset(block, 0, kPartBlockSize);
 }
 
-// Lays out up to kRecordsPerBlock records back to back: record i starts at
-// byte i * kRecordSize. Any leftover slots stay zeroed by initialize_block.
+/** 
+**Funcion serialize_part_block para serializar un bloque de piezas
+* @param parts: el vector de piezas a serializar
+* @param block: el buffer donde se almacenarán las piezas serializadas
+* @return std::size_t: el número de piezas serializadas
+*/
+//* Lays out up to kRecordsPerBlock records back to back: record i starts at
+//* byte i * kRecordSize. Any leftover slots stay zeroed by initialize_block.
 std::size_t serialize_part_block(const std::vector<Part>& parts, char* block) {
     assert(block != nullptr);
     initialize_part_block (block);
@@ -111,9 +127,13 @@ std::size_t serialize_part_block(const std::vector<Part>& parts, char* block) {
     }
     return count;
 }
-
-// Reads records out of a block in the same fixed-slot order, stopping at the
-// first pid == 0 slot (see initialize_block) since that marks unused space.
+/** 
+**Funcion deserialize_part_block para deserializar un bloque de piezas
+* @param block: el buffer donde se encuentran las piezas serializadas
+* @return std::vector<Part>: el vector de piezas deserializadas
+*/
+//* Reads records out of a block in the same fixed-slot order, stopping at the
+//* first pid == 0 slot (see initialize_block) since that marks unused space.
 std::vector<Part> deserialize_part_block(const char* block) {
     std::vector<Part> parts;
     if (block == nullptr) {
@@ -129,7 +149,11 @@ std::vector<Part> deserialize_part_block(const char* block) {
     }
     return parts;
 }
-
+/** 
+**Funcion part_record_count para contar el número de registros de piezas en un bloque
+* @param block: el buffer donde se encuentran las piezas serializadas
+* @return std::size_t: el número de piezas en el bloque
+*/
 std::size_t part_record_count(const char* block) {
     if (block == nullptr) {
         return 0;
@@ -142,7 +166,11 @@ std::size_t part_record_count(const char* block) {
     }
     return kPartsPerBlock;
 }
-
+/** 
+**Funcion first_free_part_slot para encontrar el primer slot libre en un bloque
+* @param block: el buffer donde se encuentran las piezas serializadas
+* @return std::optional<std::size_t>: el índice del primer slot libre, o std::nullopt si no hay slots libres
+*/
 std::optional<std::size_t> first_free_part_slot(const char* block) {
     if (block == nullptr) {
         return std::nullopt;
@@ -155,7 +183,13 @@ std::optional<std::size_t> first_free_part_slot(const char* block) {
     }
     return std::nullopt;
 }
-
+/** 
+**Funcion get_part_record para obtener un registro de pieza
+* @param block: el buffer donde se encuentran las piezas serializadas
+* @param slot: el índice del slot a obtener
+* @param part: la pieza donde se almacenará el resultado
+* @return bool: true si se obtuvo el registro, false en caso contrario
+*/
 bool get_part_record(const char* block, std::size_t slot, Part& part) {
     if (block == nullptr || slot >= kPartsPerBlock) {
         return false;
@@ -165,7 +199,13 @@ bool get_part_record(const char* block, std::size_t slot, Part& part) {
     }
     return part.part_id != 0;
 }
-
+/** 
+**Funcion put_part_record para insertar un registro de pieza
+* @param block: el buffer donde se encuentran las piezas serializadas
+* @param slot: el índice del slot a obtener
+* @param part: la pieza donde se almacenará el resultado
+* @return bool: true si se obtuvo el registro, false en caso contrario
+*/
 bool put_part_record(char* block, std::size_t slot, const Part& part) {
     if (block == nullptr || slot >= kPartsPerBlock || part.part_id == 0) {
         return false;
