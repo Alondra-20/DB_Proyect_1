@@ -46,7 +46,7 @@ constexpr std::array<const char*, 6> kMaterials = {
 
 }
 
-std::vector<Part> generate(std::size_t count, int first_pid) {
+std::vector<Part> generate_parts(std::size_t count, int first_pid) {
     std::vector<Part> parts;
     parts.reserve(count);
 
