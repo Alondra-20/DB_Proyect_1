@@ -160,10 +160,10 @@ PartLoadResult load_parts(const std::string& path, std::ostream& diagnostics) {
     PartLoadResult result;
     std::ifstream input(path);
 
-//!! si no se puede abrir el archivo, imprime un mensaje de error y devuelve un resultado vacío
+
     if (!input) {
         diagnostics << "cannot open CSV file: " << path << '\n';
-         ////result.skipped = 1;
+         result.skipped = 1;
         return result;
     }
     // Lee el archivo línea por línea
@@ -172,10 +172,10 @@ PartLoadResult load_parts(const std::string& path, std::ostream& diagnostics) {
 
     while (std::getline(input, line)) {
         ++line_number;
-//!! si encuentras una linea vacia, es una fila invalida, aumenta skip y empre error
+
         if (line.empty()) {
-           //// ++result.skipped;
-           //// diagnostics << "line " << line_number << ": blank line\n";
+            ++result.skipped;
+            diagnostics << "line " << line_number << ": blank line\n";
             continue;
         }
 

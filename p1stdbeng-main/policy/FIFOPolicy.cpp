@@ -30,9 +30,9 @@ void FIFOPolicy::init(std::size_t pool_size) {
 }
 
 
-// //void FIFOPolicy::on_access(std::size_t frame) {
+void FIFOPolicy::on_access(std::size_t frame) {
 // //en blanco pq no lo necesito?
-//// }
+ }
 
 /** 
 **Funcion on_load para cargar un marco en la política FIFO

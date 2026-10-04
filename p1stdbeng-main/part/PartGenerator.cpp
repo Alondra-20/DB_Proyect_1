@@ -34,7 +34,7 @@
 namespace bufman {
 namespace {
 
-// ? Pregunta para el profe si hay que hacer un constepr para colores
+
 
 
 // Se le asigna valores de materiales de manera cíclica,aseguranto que tenga valor valido y distinto
@@ -65,7 +65,7 @@ std::vector<Part> generate_parts(std::size_t count, int first_pid) {
         const std::string name = "P" + std::to_string(part.part_id);
         name.copy(part.part_name, std::min(name.size(), sizeof(part.part_name) - 1));
 
-        //!! check this
+        
         // Genera un material basado en el identificador, asegurando que sea válido y distinto
         const char* material = kMaterials[i % kMaterials.size()];
         std::memcpy(part.part_material, material, std::min(strlen(material), sizeof(part.part_material) - 1));

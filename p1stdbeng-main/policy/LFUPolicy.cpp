@@ -34,36 +34,28 @@ void LFUPolicy::init(std::size_t pool_size) {
 * @param frame: el marco que se está accediendo
 */
 void LFUPolicy::on_access(std::size_t frame) {
-    auto it = slots_.find(frame);
-
-    if (it == slots_.end()) {
-        return;
-    }
-
-    auto& slot = it->second;
-
-    // Incrementa la frecuencia del marco y actualiza su posición en el bucket correspondiente
+    auto& slot = slots_[frame];
     std::size_t old_count = slot.count;
     std::size_t new_count = old_count + 1;
 
-    auto bucket_it = buckets_.find(old_count);
+    // Elimina el marco del bucket de frecuencia anterior
+    auto old_bucket_it = buckets_.find(old_count);
 
-    if (bucket_it != buckets_.end()) {
-        bucket_it->second.erase(slot.pos);
-
-        if (bucket_it->second.empty()) {
-            buckets_.erase(bucket_it);
+    if (old_bucket_it != buckets_.end()) {
+        old_bucket_it->second.erase(slot.pos);
+        
+        if (old_bucket_it->second.empty()) {
+            buckets_.erase(old_bucket_it);
 
             if (min_freq_ == old_count) {
                 min_freq_ = new_count;
             }
         }
     }
-
+    // Agrega el marco al frente del bucket de frecuencia nueva
     buckets_[new_count].push_front(frame);
-
     slot.count = new_count;
-    slot.pos = buckets_[new_count].begin();
+    slot.pos = buckets_[new_count].begin();     
 }
 /** 
 **Funcion on_load para cargar un marco en la política LFU
@@ -72,12 +64,12 @@ void LFUPolicy::on_access(std::size_t frame) {
 void LFUPolicy::on_load(std::size_t frame) {
     auto& slot = slots_[frame];
 
-    slot.count = 1;
-    // Agrega el marco al frente del bucket de frecuencia 1
-    buckets_[1].push_front(frame);
-    slot.pos = buckets_[1].begin();
+    slot.count = 0;
+    // Agrega el marco al frente del bucket de frecuencia 0
+    buckets_[0].push_front(frame);
+    slot.pos = buckets_[0].begin();
 
-    min_freq_ = 1;
+    min_freq_ = 0;
 }
 /** 
 **Funcion on_remove para cargar un marco en la política LFU
@@ -85,39 +77,33 @@ void LFUPolicy::on_load(std::size_t frame) {
 */
 void LFUPolicy::on_remove(std::size_t frame) {
     auto it = slots_.find(frame);
-
-    if (it == slots_.end()) {
-        return;
-    }
-
+    if (it != slots_.end()) {
+ 
     std::size_t count = it->second.count;
-
     auto bucket_it = buckets_.find(count);
 
-    // Elimina el marco del bucket correspondiente y actualiza la frecuencia mínima si es necesario
-    if (bucket_it != buckets_.end()) {
-        bucket_it->second.erase(it->second.pos);
+       // Elimina el marco del bucket correspondiente y actualiza la frecuencia mínima si es necesario
+        if (bucket_it != buckets_.end()) {
+            bucket_it->second.erase(it->second.pos);
 
-        if (bucket_it->second.empty()) {
-            buckets_.erase(bucket_it);
+            if (bucket_it->second.empty()) {
+                buckets_.erase(bucket_it);
+
+                if (min_freq_ == count) {
+                    min_freq_ = 0;
+
+                    // Encuentra la nueva frecuencia mínima,recorriendo los buckets restantes
+                    for (const auto& [freq, bucket] : buckets_) {
+                        if (min_freq_ == 0 || freq < min_freq_) {
+                            min_freq_ = freq;
+                        }
+                    }
+                }
+            }
         }
+
+        slots_.erase(it);
     }
-
-    slots_.erase(it);
-// Actualiza la frecuencia mínima si es necesario
-if (buckets_.empty()) {
-    min_freq_ = 0;
-} else {
-    min_freq_ = static_cast<std::size_t>(-1);
-    
-    for (const auto& entry : buckets_) {
-        if (entry.first < min_freq_) {
-            min_freq_ = entry.first;
-        }
-    }
-
-}
-
 }
 /** 
 **Funcion pick_victim para seleccionar un marco víctima en la política LFU
@@ -127,43 +113,22 @@ if (buckets_.empty()) {
 std::optional<std::size_t>LFUPolicy::pick_victim(
     const std::vector<std::size_t>& candidates) const {
 
-    std::optional<std::size_t> victim;
-    std::size_t lowest_frequency = 0;
-        // Encuentra el marco con la frecuencia más baja entre los candidatos
-    for (std::size_t frame : candidates) {
-        auto slot_it = slots_.find(frame);
-
-        if (slot_it == slots_.end()) {
-            continue;
-        }
-
-        std::size_t frequency = slot_it->second.count;
-        // Actualiza el marco víctima si es la primera vez o si tiene una frecuencia más baja
-        if (!victim.has_value() || frequency < lowest_frequency) {
-            victim = frame;
-            lowest_frequency = frequency;
-        }
-    }
-    // Si no se encontró ningún candidato válido, devuelve std::nullopt
-    if (!victim.has_value()) {
+    if (candidates.empty())
         return std::nullopt;
-    }
-    // Busca el bucket correspondiente a la frecuencia más baja y recorre sus marcos desde el final (LRU) hasta el principio (MRU)
-    auto bucket_it = buckets_.find(lowest_frequency);
 
-    if (bucket_it == buckets_.end()) {
-        return victim;
-    }
+    auto it = buckets_.find(min_freq_);
 
-    const auto& bucket = bucket_it->second;
-    // Recorre el bucket desde el final (LRU) hasta el principio (MRU) para encontrar el marco víctima
-    for (auto it = bucket.rbegin(); it != bucket.rend(); ++it) {
-        if (std::find(candidates.begin(),candidates.end(),*it) != candidates.end()) {
-            return *it;
+    if (it != buckets_.end()) {
+        const auto& bucket = it->second;
+
+        for (auto rit = bucket.rbegin();rit != bucket.rend(); ++rit) {
+
+            if (std::find(candidates.begin(), candidates.end(),*rit) != candidates.end()) {
+                return *rit;
+            }
         }
     }
 
-    return victim;
+    return std::nullopt;
 }
-
-}  
+}
